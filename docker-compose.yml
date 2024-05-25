@@ -1,0 +1,59 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:14
+    volumes:
+      - ~/postgres_data/open-companies-database:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_DB: open_companies_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "35432:5432"
+
+  web:
+    build: .
+    command: bash -c "poetry install && poetry run python manage.py migrate && poetry run python companies/sample_data/load_sample_data.py && poetry run python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DJANGO_SETTINGS_MODULE=open_companies_database.settings_docker
+      - PYTHONPATH=/code  # important for adding the base directory to sys.path
+
+  metabase:
+    image: metabase/metabase
+    ports:
+      - "3000:3000"
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: open_companies_db
+      MB_DB_PORT: 5432
+      MB_DB_USER: user
+      MB_DB_PASS: password
+      MB_DB_HOST: db
+      MB_DB_CONNECTION_URI: "postgres://user:password@db:5432/open_companies_db"
+      MB_PASSWORD_COMPLEXITY: "strong"
+      MB_PASSWORD_LENGTH: 12
+    depends_on:
+      - db
+    entrypoint: ["/bin/sh", "-c", "apk add --no-cache jq && /setup_metabase.sh & /app/run_metabase.sh"]
+    volumes:
+      - ./setup_metabase.sh:/setup_metabase.sh
+
+  enrich_via_crustdata:
+    build: .
+    command: bash -c "poetry install & poetry run python -u fetch_crustdata.py --request_payload crustdata_request_payload.json > /proc/1/fd/1 2>/proc/1/fd/2"
+    volumes:
+      - .:/code
+    depends_on:
+      - db
+    environment:
+      - DJANGO_SETTINGS_MODULE=open_companies_database.settings_docker
+      - PYTHONPATH=/code
+    profiles:
+      - enrich

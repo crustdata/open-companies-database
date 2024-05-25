@@ -1,0 +1,31 @@
+{
+  "metrics": [
+    {
+      "metric_name": "linkedin_headcount_and_glassdoor_ceo_approval_and_g2"
+    }
+  ],
+  "filters": {
+    "op": "and",
+    "conditions": [
+      {
+        "column": "crunchbase_total_investment_usd",
+        "type": "=>",
+        "value": "5000000"
+      },
+      {
+        "column": "linkedin_headcount",
+        "type": "=>",
+        "value": "50"
+      },
+      {
+        "column": "largest_headcount_country",
+        "type": "(.)",
+        "value": "USA"
+      }
+    ]
+  },
+  "hidden_columns": [],
+  "offset": 0,
+  "count": 100,
+  "sorts": []
+}
